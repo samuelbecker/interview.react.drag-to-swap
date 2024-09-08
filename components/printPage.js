@@ -1,5 +1,18 @@
+import { useCallback, useState } from 'react';
 import styled from "styled-components";
-import Actions from "./actions";
+import {
+  closestCenter,
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { snapCenterToCursor } from "@dnd-kit/modifiers";
+import Photo from './photo';
+import PrintWrapper from './printWrapper';
 
 const Wrapper = styled.div`
   width: 600px;
@@ -7,63 +20,53 @@ const Wrapper = styled.div`
   color: #585858;
 `;
 
-const PrintWrapper = styled.div``;
-
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-`;
-
-const Title = styled.div`
-  font-style: normal;
-  font-weight: 700;
-  font-size: 16px;
-  line-height: 20px;
-`;
-
-const PageLayout = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  background: #2778a5;
-  border-radius: 8px;
-  padding: 20px;
-  margin: 17px 0 42px;
-  justify-content: space-between;
-`;
-
-const PrintPhoto = styled.div`
-  width: calc(50% - 10px);
-
-  img {
-    max-width: 100%;
-  }
-`;
-
 export default function PrintPage({ data }) {
+  const [items, setItems] = useState(data);
+  const [activeItem, setActiveItem] = useState(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragStart = useCallback(({ active }) => {
+    setActiveItem(active.data.current);
+  }, []);
+
+  const handleDragEnd = useCallback(({ active, over }) => {
+    if (active.id !== over.id) {
+      const updatedItems = [...items];
+
+      const { pageId: activePageId, itemId: activeItemId } = active.data.current;
+      const { pageId: overPageId, itemId: overItemId } = over.data.current;
+
+      const tempActiveImage = updatedItems[activePageId].images[activeItemId];
+      const tempOverImage = updatedItems[overPageId].images[overItemId];
+
+      updatedItems[activePageId].images[activeItemId] = tempOverImage;
+      updatedItems[overPageId].images[overItemId] = tempActiveImage;
+
+      setItems(updatedItems);
+      setActiveItem(null);
+    }
+  }, [items]);
+
+  const handleDragCancel = useCallback(() => {
+    setActiveItem(null);
+  }, []);
+
   return (
-    <>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel}>
       <Wrapper>
-        {Object.values(data).map((entry, i) => {
-          return (
-            <PrintWrapper key={i}>
-              <Header>
-                <Title>{entry.title}</Title>
-                <Actions />
-              </Header>
-              <PageLayout>
-                {entry.images.map((image) => {
-                  return (
-                    <PrintPhoto key={image}>
-                      <img src={image} alt="" />
-                    </PrintPhoto>
-                  );
-                })}
-              </PageLayout>
-            </PrintWrapper>
-          );
-        })}
+        {items.map((entry, pageId) => <PrintWrapper key={pageId} entry={entry} pageId={pageId} />)}
       </Wrapper>
-    </>
+      <DragOverlay dropAnimation={null} modifiers={[snapCenterToCursor]}>
+        {activeItem ? (
+          <Photo id={activeItem.id} image={activeItem.image} preview />
+        ) : null}
+      </DragOverlay>
+    </DndContext >
   );
 }

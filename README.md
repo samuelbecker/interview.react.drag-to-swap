@@ -16,8 +16,16 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Notes
 
-Feel free to modify the source code in anyway that you see fit.
+I opted to use the third-party library [@dnd-kit](https://docs.dndkit.com/), which supports touchscreen devices and provides accessibility guidelines for making drag-and-drop interfaces more usable with keyboards and screen readers.
 
+The @dnd-kit library has a sortable preset, which I thought was perfect for the task.
+
+Understanding the library and what it can do took me a while. If I had more time, I would have looked into the following:
+
+* Adding test coverage for the `handleDragEnd` function
+* Replicating select and drop animations to match the mobile app
+* Look into why droppable areas sometimes aren't reaching the edges of the photo
+* Enhancing keyboard and screen reader support
 ---
 
 <sup>Popsa.com</sup>
